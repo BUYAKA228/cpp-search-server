@@ -140,8 +140,11 @@ private:
         }
         return words;
     }
-
-  
+    //created an addition function for IDF (reqs code_reviewer)
+    double ComputeIDF(int found_in_docs) const
+    {
+        return log(static_cast<double>(document_count_)/found_in_docs);
+    }
 
     vector<Document> FindAllDocuments(const Query& query) const 
     {
@@ -155,11 +158,10 @@ private:
                 continue;
             
             auto tempFreq = freqs_.at(word);
+            //The IDF is calculated once outside the loop(reqs code_reviewer) 
+            double IDF = ComputeIDF(tempFreq.size());
             for (const auto& [id, freq] : tempFreq) 
-            {
-                const double IDF = log(static_cast<double>(document_count_) / tempFreq.size());
                 ID_relevance[id] += IDF*freq;
-            }
         }
        
         for(auto& [id, rel]:ID_relevance)
