@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 #include <set>
 #include <string>
 #include <utility>
@@ -70,8 +71,9 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
+        auto freq = 1.0 / words.size();
         for (auto& word : words) {
-            word_to_document_freqs_[word][document_id] += 1.0 / words.size();
+            word_to_document_freqs_[word][document_id] += freq;
         }
         documents_.emplace(document_id, DocumentData { ComputeAverageRating(ratings), status });
         ++document_count_;
@@ -88,9 +90,7 @@ public:
                 if (abs(lhs.relevance - rhs.relevance) < EPSILON) {
                     return lhs.rating > rhs.rating;
                 }
-                else {
-                    return lhs.relevance > rhs.relevance;
-                }
+                return lhs.relevance > rhs.relevance; 
             });
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -98,11 +98,7 @@ public:
         return matched_documents;
     }
 
-       vector<Document> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
-    }
-
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status= DocumentStatus::ACTUAL) const {
         return FindTopDocuments(raw_query,
             [&status](int document_id, DocumentStatus new_status, int rating) {
                 return new_status == status;
@@ -164,10 +160,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const auto rating : ratings) {
-            rating_sum += rating;
-        }
+        int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -195,6 +188,11 @@ private:
         return query;
     }
 
+    double ComputeIDF(int found_in_docs) const 
+    { 
+        return log(static_cast<double>(document_count_)/found_in_docs); 
+    } 
+
     template<typename DocumentPredicate>
     vector<Document> FindAllDocuments(const Query& query_words, DocumentPredicate predicate) const {
         map<int, double> document_to_relevance;
@@ -202,9 +200,10 @@ private:
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
             }
-            for (const auto& [document_id, term_freq] : word_to_document_freqs_.at(word)) {
+            auto tempFreq =  word_to_document_freqs_.at(word);
+            double IDF = ComputeIDF(tempFreq.size());
+            for (const auto& [document_id, term_freq] : tempFreq) {
                 if (predicate(document_id, documents_.at(document_id).status, documents_.at(document_id).rating)) {
-                    const double IDF = log(static_cast<double>(document_count_) / word_to_document_freqs_.at(word).size());
                     document_to_relevance[document_id] += IDF * term_freq;
                 }
             }
