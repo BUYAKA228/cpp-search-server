@@ -11,11 +11,24 @@
 //#pragma GCC diagnostic ignored "-Wunused-parameter"
 void TestSearchServer();
 
-#define TEST true
+#define TEST false
+#define TEST_ONLY false
 
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+
+struct Document {
+    Document() = default;
+
+    Document(int id_, double relevance_, int rating_)
+        : id(id_), relevance(relevance_), rating(rating_)
+    {}
+
+    int id = 0;
+    double relevance = 0.0;
+    int rating = 0;
+};
 
 string ReadLine() {
     string s;
@@ -51,12 +64,6 @@ vector<string> SplitIntoWords(const string& text) {
     return words;
 }
 
-struct Document {
-    int id;
-    double relevance;
-    int rating;
-};
-
 enum class DocumentStatus {
     ACTUAL,
     IRRELEVANT,
@@ -66,6 +73,29 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
+
+    SearchServer() = default;
+
+    explicit SearchServer(const string& stop_words) {
+        for (const string& word : SplitIntoWords(stop_words)) {
+            stop_words_.insert(word);
+        }
+    }
+
+    template <typename StringCollection>
+    explicit SearchServer(const StringCollection& stop_words) {
+        string stop_words_text;
+        for (const auto& text : stop_words) {
+            stop_words_text += " "s;
+            stop_words_text += text;
+        }
+        for (const auto& word : SplitIntoWords(stop_words_text)) {
+            stop_words_.insert(word);
+        }
+    }
+
+
+
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
@@ -237,28 +267,24 @@ void PrintDocument(const Document& document) {
 }
 
 int main() {
+    #if TEST_ONLY == true
+    TestSearchServer();
+    #endif
+
     #if TEST == true
     TestSearchServer();
     #endif
 
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
-    search_server.AddDocument(0, "белый кот и модный ошейник"s,        DocumentStatus::ACTUAL, {8, -3});
-    search_server.AddDocument(1, "пушистый кот пушистый хвост"s,       DocumentStatus::ACTUAL, {7, 2, 7});
-    search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, {5, -12, 2, 1});
-    search_server.AddDocument(3, "ухоженный скворец евгений"s,         DocumentStatus::BANNED, {9});
-    cout << "ACTUAL by default:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s)) {
-        PrintDocument(document);
-    }
-    cout << "BANNED:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-    cout << "Even ids:"s << endl;
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
+    #if TEST_ONLY == false
+    // инициализируем поисковую систему, передавая стоп-слова в контейнере vector
+    const vector<string> stop_words_vector = {"и"s, "в"s, "на"s, ""s, "в"s};
+    SearchServer search_server1(stop_words_vector);
+    // инициализируем поисковую систему передавая стоп-слова в контейнере set
+    const set<string> stop_words_set = {"и"s, "в"s, "на"s};
+    SearchServer search_server2(stop_words_set);
+    // инициализируем поисковую систему строкой со стоп-словами, разделёнными пробелами
+    SearchServer search_server3("  и  в на   "s); 
+    #endif
     return 0;
 } 
 
