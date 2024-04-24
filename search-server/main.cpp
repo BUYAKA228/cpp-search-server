@@ -9,6 +9,7 @@
 #include <cmath>
 #include <optional>
 
+
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -104,8 +105,7 @@ class SearchServer
                 throw invalid_argument("отрицательный id"s);
             if (documents_.count(document_id))
                 throw invalid_argument("повторный id"s);
-            if (!IsValidWord(document)) 
-                throw invalid_argument("недопустимые знаки"s);
+            
    
             const vector<string> words = SplitIntoWordsNoStop(document);
             auto freq = 1.0 / words.size(); 
@@ -210,8 +210,12 @@ class SearchServer
         {
             vector<string> words;
             for (const string& word : SplitIntoWords(text)) 
+            {
+                if (!IsValidWord( word)) 
+                    throw invalid_argument("недопустимые знаки"s);
                 if (!IsStopWord(word))
                     words.push_back(word);
+            }
             return words;
         }
 
