@@ -305,3 +305,7 @@ class SearchServer
             return matched_documents;
         }
 };
+int main()
+{
+    
+}
