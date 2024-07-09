@@ -307,5 +307,5 @@ class SearchServer
 };
 int main()
 {
-    
+    std::cout << "hello" <<std::endl;
 }
